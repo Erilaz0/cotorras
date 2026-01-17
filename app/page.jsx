@@ -9,7 +9,7 @@ export default function Home() {
   const [counts, setCounts] = useState({ aFavor: 0, enContra: 0 });
 
   const fetchCounts = async () => {
-    const res = await fetch("/api/opinion");
+    const res = await fetch(`${window.location.origin}/api/opinion`);
     const data = await res.json();
     setCounts(data);
   };
@@ -29,7 +29,7 @@ export default function Home() {
     setLoading(true);
     console.log(opinion);
 
-    await fetch("/api/opinion", {
+    fetch(`${window.location.origin}/api/opinion`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ opinion: opinion, email: email }),
