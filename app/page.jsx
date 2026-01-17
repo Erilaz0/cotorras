@@ -1,11 +1,28 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [opinion, setOpinion] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [counts, setCounts] = useState({ aFavor: 0, enContra: 0 });
+
+  const fetchCounts = async () => {
+    const res = await fetch("/api/opinion");
+    const data = await res.json();
+    setCounts(data);
+  };
+
+  useEffect(() => {
+    fetchCounts();
+
+    const interval = setInterval(() => {
+      fetchCounts();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,7 +70,22 @@ export default function Home() {
         >
           Encuesta ciudadana sobre el exterminio de cotorras
         </h1>
-
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            margin: "24px 0",
+            background: "#F6FFF9",
+            padding: "16px",
+            borderRadius: "16px",
+            fontWeight: "600",
+          }}
+        >
+          <span style={{ color: "#219653" }}>
+            ❌ En contra: {counts.enContra}
+          </span>
+          <span style={{ color: "#EB5757" }}>⚠️ A favor: {counts.aFavor}</span>
+        </div>
         <p
           style={{
             textAlign: "center",

@@ -1,55 +1,41 @@
-import fs from "fs";
-import path from "path";
-
-const basePath = path.join(process.cwd(), "data");
-const votesFile = path.join(basePath, "votes.json");
-const opinionsFile = path.join(basePath, "opinions.json");
-
-function initStorage() {
-  if (!fs.existsSync(basePath)) {
-    fs.mkdirSync(basePath);
-  }
-
-  if (!fs.existsSync(votesFile)) {
-    fs.writeFileSync(
-      votesFile,
-      JSON.stringify({ favor: 0, contra: 0 }, null, 2),
-    );
-  }
-
-  if (!fs.existsSync(opinionsFile)) {
-    fs.writeFileSync(opinionsFile, JSON.stringify({ entries: [] }, null, 2));
-  }
-}
+import { connectMongoDB } from "../connection";
+import Opinion from "../cot.model";
 
 export async function POST(req) {
   try {
-    initStorage();
+    await connectMongoDB();
 
-    const body = await req.json();
-    const opinion = body.opinion;
-    const email = body.email;
+    const { opinion, email } = await req.json();
 
-    const votes = JSON.parse(fs.readFileSync(votesFile, "utf-8"));
-    const opinions = JSON.parse(fs.readFileSync(opinionsFile, "utf-8"));
+    if (!opinion || !email) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Faltan datos" }),
+        { status: 400 },
+      );
+    }
 
-    if (opinion === "a favor") votes.favor++;
-    if (opinion === "en contra") votes.contra++;
+    await Opinion.create({ opinion, email });
 
-    opinions.entries.push({
-      opinion,
-      email: email || null,
-      date: new Date().toISOString(),
+    // Conteo dinámico
+    const enContra = await Opinion.countDocuments({
+      opinion: "en contra",
+    });
+    const aFavor = await Opinion.countDocuments({
+      opinion: "a favor",
     });
 
-    fs.writeFileSync(votesFile, JSON.stringify(votes, null, 2));
-    fs.writeFileSync(opinionsFile, JSON.stringify(opinions, null, 2));
-
-    return new Response(JSON.stringify({ success: true, votes }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        total: {
+          aFavor,
+          enContra,
+        },
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
   } catch (err) {
-    console.error("ERROR:", err);
+    console.error(err);
     return new Response(
       JSON.stringify({ success: false, error: err.message }),
       { status: 500 },
@@ -58,10 +44,16 @@ export async function POST(req) {
 }
 
 export async function GET() {
-  initStorage();
-  const votes = JSON.parse(fs.readFileSync(votesFile, "utf-8"));
+  await connectMongoDB;
 
-  return new Response(JSON.stringify(votes), {
+  const enContra = await Opinion.countDocuments({
+    opinion: "en contra",
+  });
+  const aFavor = await Opinion.countDocuments({
+    opinion: "a favor",
+  });
+
+  return new Response(JSON.stringify({ aFavor, enContra }), {
     headers: { "Content-Type": "application/json" },
   });
 }
