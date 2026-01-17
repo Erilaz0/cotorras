@@ -44,7 +44,7 @@ export async function POST(req) {
 }
 
 export async function GET() {
-  await connectMongoDB;
+  await connectMongoDB();
 
   const enContra = await Opinion.countDocuments({
     opinion: "en contra",
